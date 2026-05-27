@@ -1,0 +1,34 @@
+# nexus-secrets configuration
+# Swarm-aware secrets management for Tech Duinn
+
+# Master key location (hex-encoded 32-byte key)
+# Can also be set via NEXUS_MASTER_KEY environment variable
+master_key_path: /home/donn/.nexus/secrets/master.key
+
+# SQLite database path
+db_path: /home/donn/.nexus/secrets/vault.db
+
+# HTTP API server port
+api_port: 7438
+
+# Environment variable containing API keys (format: "id1:key1,id2:key2")
+api_key_env: NEXUS_API_KEYS
+
+# Kubernetes configuration
+k8s:
+  # Default namespace for secrets
+  namespace: nexus-secrets
+
+  # Map vault namespaces to K8s namespaces
+  # Example: secrets in vault namespace "ollama" go to K8s namespace "ai"
+  namespace_map:
+    ollama: ai
+    telegram: messaging
+    jellyfin: media
+    cloudflare: networking
+    redis: infrastructure
+    chroma: ai
+    engram: ai
+    litellm: ai
+    pihole: networking
+    vaultwarden: security
