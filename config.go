@@ -38,7 +38,7 @@ func DefaultConfig() *Config {
 		MasterKeyPath: filepath.Join(home, ".nexus", "secrets", "master.key"),
 		DBPath:        filepath.Join(home, ".nexus", "secrets", "vault.db"),
 		APIPort:       7438,
-		APIKeyEnv:     "NEXUS_API_KEY",
+		APIKeyEnv:     "NEXUS_API_KEYS",
 		K8s: K8sConfig{
 			Namespace:    "nexus-secrets",
 			NamespaceMap: make(map[string]string),

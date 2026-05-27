@@ -18,13 +18,14 @@ type AuthConfig struct {
 }
 
 // NewAuthConfig creates an AuthConfig from environment variables.
-// NEXUS_API_KEYS format: "id1:key1,id2:key2"
-func NewAuthConfig() *AuthConfig {
+// apiKeyEnv is the name of the environment variable containing the keys.
+// Format: "id1:key1,id2:key2"
+func NewAuthConfig(apiKeyEnv string) *AuthConfig {
 	cfg := &AuthConfig{
 		APIKeys: make(map[string]string),
 	}
 
-	keysEnv := os.Getenv("NEXUS_API_KEYS")
+	keysEnv := os.Getenv(apiKeyEnv)
 	if keysEnv == "" {
 		cfg.Enabled = false
 		return cfg
@@ -96,7 +97,7 @@ func (auth *AuthConfig) GetKeyID(key string) string {
 }
 
 // extractAPIKey extracts the API key from the request.
-// Checks: Authorization: Bearer <key>, X-API-Key header, ?api_key query param.
+// Checks: Authorization: Bearer <key>, X-API-Key header.
 func extractAPIKey(r *http.Request) string {
 	// Check Authorization header (Bearer token)
 	if auth := r.Header.Get("Authorization"); auth != "" {
@@ -107,11 +108,6 @@ func extractAPIKey(r *http.Request) string {
 
 	// Check X-API-Key header
 	if key := r.Header.Get("X-API-Key"); key != "" {
-		return key
-	}
-
-	// Check query parameter
-	if key := r.URL.Query().Get("api_key"); key != "" {
 		return key
 	}
 

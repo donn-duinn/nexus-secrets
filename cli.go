@@ -2,6 +2,7 @@ package main
 
 import (
 	"bufio"
+	"encoding/json"
 	"fmt"
 	"os"
 	"strings"
@@ -226,16 +227,11 @@ func (c *CLI) handleExport(args []string) error {
 			fmt.Printf("%s=%q\n", envKey, v)
 		}
 	case "json":
-		fmt.Println("{")
-		first := true
-		for k, v := range export {
-			if !first {
-				fmt.Println(",")
-			}
-			fmt.Printf("  %q: %q", k, v)
-			first = false
+		jsonBytes, err := json.MarshalIndent(export, "", "  ")
+		if err != nil {
+			return fmt.Errorf("encoding JSON: %w", err)
 		}
-		fmt.Println("\n}")
+		fmt.Println(string(jsonBytes))
 	default:
 		return fmt.Errorf("unsupported format: %s (use env or json)", format)
 	}

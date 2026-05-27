@@ -207,8 +207,8 @@ func (j *K8sInjector) ExportK8sManifest(vaultNS string) (string, error) {
 				"nexus.io/vault-namespace":     vaultNS,
 			},
 		},
-		"type": "Opaque",
-		"data": data,
+		"type":       "Opaque",
+		"stringData": data,
 	}
 
 	jsonBytes, err := json.MarshalIndent(manifest, "", "  ")

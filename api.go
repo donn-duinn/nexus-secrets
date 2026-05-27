@@ -6,6 +6,7 @@ import (
 	"log"
 	"net/http"
 	"strings"
+	"time"
 )
 
 // APIServer is the HTTP API server for nexus-secrets.
@@ -96,6 +97,8 @@ func (s *APIServer) handleGet(namespace, key string, w http.ResponseWriter, r *h
 }
 
 func (s *APIServer) handleSet(namespace, key string, w http.ResponseWriter, r *http.Request) {
+	r.Body = http.MaxBytesReader(w, r.Body, 1<<20) // 1MB limit
+
 	var body struct {
 		Value string `json:"value"`
 	}
@@ -143,6 +146,8 @@ func (s *APIServer) handleRotate(namespace, key string, w http.ResponseWriter, r
 		jsonError(w, "method not allowed", http.StatusMethodNotAllowed)
 		return
 	}
+
+	r.Body = http.MaxBytesReader(w, r.Body, 1<<20) // 1MB limit
 
 	var body struct {
 		Value string `json:"value"`
@@ -225,9 +230,15 @@ func jsonError(w http.ResponseWriter, msg string, code int) {
 	fmt.Fprintf(w, `{"error":%q}`, msg)
 }
 
-// StartAPI starts the HTTP API server.
-func StartAPI(addr string, vault *Vault, auth *AuthConfig) error {
-	server := NewAPIServer(vault, auth)
+// StartAPI creates and returns a configured HTTP API server.
+func StartAPI(addr string, vault *Vault, auth *AuthConfig) *http.Server {
+	api := NewAPIServer(vault, auth)
 	log.Printf("nexus-secrets API listening on %s", addr)
-	return http.ListenAndServe(addr, server.Handler())
+	return &http.Server{
+		Addr:         addr,
+		Handler:      api.Handler(),
+		ReadTimeout:  15 * time.Second,
+		WriteTimeout: 15 * time.Second,
+		IdleTimeout:  60 * time.Second,
+	}
 }

@@ -1,11 +1,15 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"log"
 	"net/http"
 	"os"
+	"os/signal"
 	"strconv"
+	"syscall"
+	"time"
 )
 
 func main() {
@@ -50,7 +54,7 @@ func runServer(cfg *Config) error {
 	defer vault.Close()
 
 	// Initialize auth
-	auth := NewAuthConfig()
+	auth := NewAuthConfig(cfg.APIKeyEnv)
 
 	// Determine listen address
 	addr := ":" + strconv.Itoa(cfg.APIPort)
@@ -58,17 +62,42 @@ func runServer(cfg *Config) error {
 		addr = envAddr
 	}
 
-	// Start API server
-	log.Printf("starting nexus-secrets server on %s", addr)
-	return StartAPI(addr, vault, auth)
+	// Start API server with graceful shutdown
+	srv := StartAPI(addr, vault, auth)
+
+	// Channel to receive errors from ListenAndServe
+	errCh := make(chan error, 1)
+	go func() {
+		errCh <- srv.ListenAndServe()
+	}()
+
+	// Wait for interrupt signal
+	sigCh := make(chan os.Signal, 1)
+	signal.Notify(sigCh, syscall.SIGTERM, syscall.SIGINT)
+
+	select {
+	case sig := <-sigCh:
+		log.Printf("received signal %v, shutting down gracefully", sig)
+	case err := <-errCh:
+		if err != nil && err != http.ErrServerClosed {
+			return fmt.Errorf("server error: %w", err)
+		}
+		return nil
+	}
+
+	// Give active requests up to 10 seconds to finish
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	if err := srv.Shutdown(ctx); err != nil {
+		return fmt.Errorf("server shutdown: %w", err)
+	}
+
+	log.Println("server stopped cleanly")
+	return nil
 }
 
 func runCLI(cfg *Config) error {
-	// Check for serve command
-	if len(os.Args) > 1 && os.Args[1] == "serve" {
-		return runServer(cfg)
-	}
-
 	// Handle init command separately (doesn't need vault)
 	if len(os.Args) > 1 && os.Args[1] == "init" {
 		return handleInit(cfg)
